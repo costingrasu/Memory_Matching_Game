@@ -1,0 +1,194 @@
+import {Button} from "std-widgets.slint";
+
+struct TileData {
+    image: image,
+    image_visible: bool,
+    solved: bool,
+}
+
+component Score inherits Rectangle{
+    width: 326px;
+    height: 326px;
+    in-out property <int> score;
+    in-out property <float> time;
+    VerticalLayout {
+        Text {
+            horizontal-alignment: center;
+            text: "You won!";
+            color: blue;
+            font-size: 30px;   
+        }
+
+        Text {
+            horizontal-alignment: center;
+            text: "Overall score: " + score;
+            color: red;
+            font-size: 26px;   
+        }
+
+        Text {
+            horizontal-alignment: center;
+            text: "Time: " + time;
+            color: red;
+            font-size: 26px;   
+        }
+    }
+}
+
+component Menu inherits Rectangle {
+    callback clicked;
+    width: 326px;
+    height: 326px;
+    in-out property <int> difficulty;
+    VerticalLayout {
+        Text {
+            horizontal-alignment: center;
+            text: "Choose difficulty:";
+            color: blue;
+            font-size: 30px;
+        }
+
+        Button {
+            text: "EASY";
+            clicked => {
+                root.difficulty = 2;
+                root.clicked();
+            }
+        }
+
+        Button {
+            text: "MEDIUM";
+            clicked => {
+                root.difficulty = 3;
+                root.clicked();
+            }
+        }
+
+        Button {
+            text: "HARD";
+            clicked => {
+                root.difficulty = 4;
+                root.clicked();
+            }
+        }
+    }
+}
+
+
+component MemoryTile inherits Rectangle {
+    callback clickedb;
+    in property <bool> open_curtain;
+    in property <bool> solved;
+    in property <image> icon;
+    border-radius: 10px;
+    height: 64px;
+    width: 64px;
+    background: solved ? #34CE57 : #3960D5;
+    animate background { duration: 800ms; }
+
+    Image {
+        source: icon;
+        width: open_curtain ? parent.width : 0px;
+        height: parent.height;
+        animate width { duration: 250ms; easing: ease-in; }
+    }
+
+    Image {
+        source: @image-url("../icons/cover.jpg");
+        width: open_curtain ? 0px : parent.width;
+        height: parent.height;
+        animate width { duration: 250ms; easing: ease-in; }
+    }
+
+    // // Left curtain
+    // Rectangle {
+    //     background: #193076;
+    //     border-top-left-radius: 10px;
+    //     border-bottom-left-radius: 10px;
+    //     x: 0px;
+    //     width: open_curtain ? 0px : (parent.width / 2) + 1px;
+    //     height: parent.height;
+    //     animate width { duration: 250ms; easing: ease-in; }
+    // }
+
+    // // Right curtain
+    // Rectangle {
+    //     background: #193076;
+    //     border-top-right-radius: 10px;
+    //     border-bottom-right-radius: 10px;
+    //     x: open_curtain ? parent.width : (parent.width / 2);
+    //     width: open_curtain ? 0px : (parent.width / 2);
+    //     height: parent.height;
+    //     animate width { duration: 250ms; easing: ease-in; }
+    //     animate x { duration: 250ms; easing: ease-in; }
+    // }
+
+    TouchArea {
+        clicked => {
+            // Delegate to the user of this element
+            root.clickedb();
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    visible: true;
+    width: 326px;
+    height: 326px;
+
+    callback check_if_won();
+    callback check_if_pair_solved(); // Added
+    callback asign_dif();
+    in property <bool> disable_tiles; // Added
+    property <bool> vis: true;
+    property <int> index;
+    in-out property <int> dif;
+    in-out property <int> scuor;
+    in-out property <float> timp;
+
+    in property <[TileData]> memory_tiles: [
+        { image: @image-url("../icons/at.png") },
+        { image: @image-url("../icons/balance-scale.png") },
+        { image: @image-url("../icons/bicycle.png") },
+        { image: @image-url("../icons/bus.png") },
+        { image: @image-url("../icons/cloud.png") },
+        { image: @image-url("../icons/cogs.png") },
+        { image: @image-url("../icons/motorcycle.png") },
+        { image: @image-url("../icons/video.png") },
+    ];
+
+    Menu {
+        clicked => {
+            parent.dif = self.difficulty;
+            root.asign_dif();
+            root.vis = false;
+        }
+        visible: vis;
+    }
+
+    in-out property <bool> won: false;
+    for tile[i] in memory_tiles : MemoryTile {
+        x: mod(i, 4) * 74px;
+        y: floor(i / 4) * 74px;
+        width: 64px;
+        height: 64px;
+        icon: tile.image;
+        visible: !vis && !won;
+        open_curtain: tile.image_visible || tile.solved;
+        // propagate the solved status from the model to the tile
+        solved: tile.solved;
+        clickedb => {
+            if (!root.disable_tiles) {
+                tile.image_visible = !tile.image_visible;
+                root.check_if_pair_solved();
+                root.check_if_won();
+            }
+        }
+    }
+
+    if won: Score{
+        score: parent.scuor;
+        time: parent.timp;
+    }
+
+}
